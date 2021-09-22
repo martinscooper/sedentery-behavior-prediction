@@ -1,0 +1,12 @@
+.idea/*
+__pycache__/
+*/__pycache__/
+*/*/__pycache__/
+sensing_data/*
+pkl/lagged_datasets/*
+pkl/sensing_data/*
+pkl/pickle_protocol5/
+dataset/
+logs/
+.ipynb_checkpoints/
+pkl/experiments/experiments_df.pkl
