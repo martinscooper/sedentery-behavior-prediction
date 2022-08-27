@@ -19,6 +19,8 @@ from tcn import tcn_full_summary
 
 
 class Experiment(ABC):
+    """Base class for representing an experiment
+    """
     def __init__(self, model_fn, model_name, task_type, user, nb_lags, period, nb_min, need_3d_input):
         self.lags = nb_lags
         self.task_type = task_type
@@ -50,6 +52,14 @@ class Experiment(ABC):
         pass
 
     def time_series_split(self):
+        """Generates the splits of the dataset
+
+        Split the data in equal temporal slots.
+
+        Yields:
+            tuple: X_train, y_train, X_test, y_test for eacg split
+
+        """
         min_train = self.train_data.index.get_level_values(1).min()
         min_test = self.test_data.index.get_level_values(1).min()
         max_train = self.train_data.index.get_level_values(1).max()
@@ -81,6 +91,9 @@ class Experiment(ABC):
             yield X_train, y_train, X_test, y_test
 
     def reserve_file(self):
+        """Reserves the experiment pickle files
+        Useful for cases when multiple process are running the experiments.
+        """
         experiment_file = open(self.filename, 'wb')
         pkl.dump(['almost empty'], experiment_file)
         experiment_file.close()
@@ -105,6 +118,18 @@ class Experiment(ABC):
             self.experiment_data = pkl.load(open(self.filename, 'rb'))
 
     def run(self, nb_epochs=64, batch_size=64, with_class_weights=False, experiment_verbose=0, fit_verbose=0, model_verbose=0):
+        """Runs the experiment
+        Calls the fit method and saves useful information to be used to analyze the results
+
+        Args:
+            nb_epochs (int, optional): number of epochs. Defaults to 64.
+            batch_size (int, optional): the batch size. Defaults to 64.
+            with_class_weights (bool, optional): . Defaults to False.
+            experiment_verbose (int, optional): verbosity level. Defaults to 0.
+            fit_verbose (int, optional): verbose passed to the fit method. Defaults to 0.
+            model_verbose (int, optional): model verbosity. If 1 prints the model summary. Defaults to 0.
+        """
+
         print('*** ' * 10)
         print('Experiment is: ')
         print(self.name)
@@ -216,7 +241,11 @@ class Experiment(ABC):
 
 
 class PersonalExperiment(Experiment):
+    """Class for running personal experiments
 
+    Train and test data come from the same user
+
+    """
     def __init__(self, model_fn, model_name, task_type, user, nb_lags, period, nb_min, need_3d_input):
         super().__init__(model_fn, model_name, task_type,
                          user, nb_lags, period, nb_min, need_3d_input)
@@ -233,6 +262,11 @@ class PersonalExperiment(Experiment):
 
 
 class ImpersonalExperiment(Experiment):
+    """Class for running impersonal experiments
+
+    Train and test data come from different users
+
+    """
     def __init__(self, model_fn, model_name, task_type, user, nb_lags, period, nb_min, need_3d_input):
         super().__init__(model_fn, model_name, task_type,
                          user, nb_lags, period, nb_min, need_3d_input)
@@ -249,6 +283,13 @@ class ImpersonalExperiment(Experiment):
 
 
 class HybridExperiment(Experiment):
+    """Class for running hybrid experiments
+
+    Equal to impersonal experiments but train data also includes 
+    data about test dataset user 
+
+    """
+
     def __init__(self, model_fn, model_name, task_type, user, nb_lags, period, nb_min, need_3d_input):
         super().__init__(model_fn, model_name, task_type,
                          user, nb_lags, period, nb_min, need_3d_input)

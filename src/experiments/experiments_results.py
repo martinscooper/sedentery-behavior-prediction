@@ -24,9 +24,11 @@ from experiments.experiment_running import get_closests
 def get_classification_results(keywords):
     return [(f[0:-4], pkl.load(open(f'./pkl/results/{f}', 'rb'))) for f in listdir('./pkl/results') if all(f'_{k}' in f for k in keywords)]
 
+
 def print_classification_results(keywords):
     (names, results) = map(list, zip(*get_classification_results(keywords)))
     show_metric('', 'RMSE', names, results)
+
 
 def show_metric(title, ylabel, labels, data):
     user_labels = get_list_of_users()
@@ -44,14 +46,17 @@ def show_metric(title, ylabel, labels, data):
     plt.grid(True)
     plt.show()
 
+
 def get_experiments_data(with_y_test_pred=False):
     df = pd.read_pickle(f'../pkl/experiments/experiments_df.pkl')
     if not with_y_test_pred:
         return df.loc[:, [col for col in df.columns if col!='y_test_pred']]
     return df
 
-def generate_df_from_experiments():
 
+def generate_df_from_experiments():
+    """Generate a DataFram from all the available experiment results
+    """
     start = time.time()
     rows = []
     combs = get_experiment_combinations()
@@ -91,6 +96,7 @@ def generate_df_from_experiments():
     filename = f'../pkl/experiments/experiments_df.pkl'
     df.to_pickle(filename)
     print(f'This took {round((time.time() - start)/60, 3)}')
+
 
 def rank_results(comp_col='arch', rank_by='score', based_on='user', ix=-1, **kwargs):
     '''
@@ -140,6 +146,7 @@ def rank_results(comp_col='arch', rank_by='score', based_on='user', ix=-1, **kwa
     del summarize['bo']
     del summarize['best_rank_by']
     return summarize, results
+
 
 def rank_results_agg_func(comp_col='arch', rank_by='score', based_on='user', ix=-1, agg_func = 'mean', **kwargs):
     '''
@@ -205,11 +212,13 @@ def rank_results_agg_func(comp_col='arch', rank_by='score', based_on='user', ix=
             summarize.at[j,i] = sum(results[i]==j)
     return summarize, results
 
+
 def filter_exp(**kwargs):
     df = get_experiments_data()
     for k,v in kwargs.items():
         df = df.loc[df[k]==v]
     return df
+
 
 def order_exp_by(ix=-1, rank_by='score', **kwargs):
     df = filter_exp(**kwargs)
@@ -218,10 +227,10 @@ def order_exp_by(ix=-1, rank_by='score', **kwargs):
     else: rank_by_col = f'mean_{rank_by}'
     return df.sort_values(by=rank_by_col), rank_by_col
 
+
 def check_results_correctness():
-    # este codigo compara los datos de y_test de los experimentos y 
-    # los que estan en el dataset, para ver si concuerdan
-    # en algunos hay una diferencia de uno, pero nada mas
+    """Check if experiment results makes sense
+    """
     poi = 'per'
     arch = 'mlp'
     nb_lags = 4
@@ -255,10 +264,11 @@ def check_results_correctness():
         new_df = pd.DataFrame(data={'total': arr1, 'exp': arr2})
         print(new_df)        
 
+
 def get_test_predicted_arrays(exp_data, return_shapes=False):
     zipped = zip(*exp_data)
     l = list(zipped)
-    # falla si solo hay un caso
+    # fails if there is only one example
     l[1] = [np.squeeze(a) for a in l[1]]
     y_test = np.concatenate(l[0]) 
     y_pred = np.concatenate(l[1])
@@ -268,7 +278,10 @@ def get_test_predicted_arrays(exp_data, return_shapes=False):
     else: 
         return y_test, y_pred
 
+
 def print_results(fromi=1, toi=5, archs=['rnn', 'tcn', 'cnn', 'mlp'], poi='per', user=32, lags=1, period=1, gran=60):
+    """Plots the results of a set of experiments 
+    """
     df = get_experiments_data(False, with_y_test_pred=True)
     exp = df.loc[((df.poi==poi) & (df.user==user) & (df.nb_lags==lags) & (df.period==period) & (df.gran==gran))]
     plt.close()
@@ -297,7 +310,16 @@ def print_results(fromi=1, toi=5, archs=['rnn', 'tcn', 'cnn', 'mlp'], poi='per',
     plt.legend()
     plt.show()
 
+
 def plot_iterations_time_pattern(max_minutes=None,**kwargs):
+    """Plots the time it took for each experiment
+
+    The time is plotted for each iteration and data points are joined with a line.
+    There is a different color for each neural network type.
+
+    Args:
+        max_minutes (_type_, optional): _description_. Defaults to None.
+    """
     df = filter_exp(**kwargs)
     column_names = [f'time_{i}' for i in range(5)]
     plt.close()
@@ -319,14 +341,15 @@ def plot_iterations_time_pattern(max_minutes=None,**kwargs):
     ax.set_xlim(1,5)
     if max_minutes != None: 
         ax.set_ylim(0, max_minutes)
-    plt.ylabel('Tiempo')
-    plt.xlabel('Iteración')
+    plt.ylabel('Time')
+    plt.xlabel('Iteration')
 
     handles = [lines.Line2D([], [], color=c,
                             markersize=15, label=k.upper()) for k,c in archs_colors.items()]
     plt.legend(loc='upper left', handles=handles)
 
     plt.show()
+
 
 def plot_iterations_score_pattern(max_mse=None, **kwargs):
     df = filter_exp(**kwargs)
@@ -351,13 +374,20 @@ def plot_iterations_score_pattern(max_mse=None, **kwargs):
     if max_mse != None: 
         ax.set_ylim(0, max_mse)
     plt.ylabel('MSE')
-    plt.xlabel('Iteración')
+    plt.xlabel('Iteration')
 
     handles = [lines.Line2D([], [], color=c,
                             markersize=15, label=k.upper()) for k,c in archs_colors.items()]
     plt.legend(loc='upper left', handles=handles)
 
     plt.show()
+
+
+
+#######################
+# Funtions for plotting results where all the users al positioned
+# using the logic used to calculate the clusters and centroids
+########################
 
 def plot_clusters_performance(rank_by='score', ix=-1, mean=True, **kwargs):
     df = get_clean_dataset()
@@ -458,7 +488,6 @@ def plot_clusters_performance_both_aggr_func(rank_by='score', ix=-1, mean=True, 
 
     fig.tight_layout() 
     plt.show()
-
 
 def plot_clusters_performance_both_aggr_func_lags(rank_by='score', ix=-1, mean=True, **kwargs):
     AGGREGATION = 'Función de agregación:'
@@ -900,94 +929,299 @@ def plot_clusters_performance_by_lags(rank_by='score', ix=-1, **kwargs):
 
     plt.show()
 
-def get_p_value(comp_col='arch', v1='tcn', v2='mlp', rank_by='score', force_test = None, treshhold=1, verbose=1, decil=None, print_always=True, **kwargs):
-    exps = filter_exp(**kwargs)
-    if rank_by in ['score','time']:
-        rank_by = f'mean_{rank_by}'
-    
-    v1_exps_df = exps.loc[exps[comp_col]==v1].loc[:,rank_by]
-    v1_exps = v1_exps_df.dropna().values
-    v2_exps_df = exps.loc[exps[comp_col]==v2].loc[:,rank_by]
-    v2_exps = v2_exps_df.dropna().values
+#######################
 
-    if decil != None: 
-        decil_per_arch = quantile_decil(comp_col)
-        decil_value = decil_per_arch.filter(items=[v1], axis=0).iloc[0,decil]
-        v1_exps = v1_exps[v1_exps < decil_value]
-        decil_value = decil_per_arch.filter(items=[v2], axis=0).iloc[0,decil]
-        v2_exps = v2_exps[v2_exps < decil_value]
 
-    wilcoxon_diff = (v1_exps_df.values - v2_exps_df.values)
-    wilcoxon_diff = wilcoxon_diff[~np.isnan(wilcoxon_diff)]
-
-    v1_mean = np.mean(v1_exps)
-    v2_mean = np.mean(v2_exps) 
-
-    v1_median= np.median(v1_exps)
-    v2_median = np.median(v2_exps) 
-
-    v1_std = np.std(v1_exps) 
-    v2_std = np.std(v2_exps)
-
-        
-    alpha = 0.05
-
-    v1_is_normal = shapiro(v1_exps)[1] > alpha
-    v2_is_normal = shapiro(v2_exps)[1] > alpha
-
-    if (v1_is_normal and v2_is_normal) or force_test == "student":
-        performed_test = 'Performing Student test'
-        statistic_diff = ttest_ind(v1_exps,v2_exps, nan_policy="omit")
-    else:
-        performed_test = 'Performing Wilcoxon test'
-        statistic_diff = wilcoxon(wilcoxon_diff, alternative='less')
-
-    if statistic_diff[1] < alpha:
-        show_results = True
-    else: 
-        show_results = False
-
-    if (print_always or show_results) and verbose>0 :
-        print('*' * 16)
-        print(f'Comparing values {v1} and {v2} from {comp_col} category, ranked by {rank_by} con **kwargs={kwargs}\n')
-        if show_results: print('///Diferencia sifnificativa hallada///')
-        print(performed_test)
-        print(statistic_diff)
-        print('')
-        
-        if verbose>1: 
-            print(f'{v1} Valores NaN: {v1_exps_df.isna().sum()} de {v1_exps_df.count()}')
-            print(f'{v2} Valores NaN: {v2_exps_df.isna().sum()} de {v2_exps_df.count()}\n')
-
-            print(f'mean {v1}: {v1_mean}')
-            print(f'mean {v2}: {v2_mean}\n')
-            print(f'median {v1}: {v1_median}')
-            print(f'median {v2}: {v2_median}\n')
-            print(f'std {v1}: {v1_std}')
-            print(f'std {v2}: {v2_std}\n')
-            print('\n')
-        if verbose > 2: 
-            v1_range = (v1_mean - min(2 * v1_std, 1.5), v1_mean + min(2 * v1_std, 1.5))
-            v2_range = (v2_mean - min(2 * v2_std, 1.5), v2_mean + min(2 * v2_std, 1.5))
-            if v1_mean > v2_mean: 
-                range = v2_range
-            else: range = v1_range 
-            plt.hist(v1_exps, bins=25, color='b', edgecolor='k', alpha=0.5, label=str.upper(v1), range=range)
-            plt.hist(v2_exps, bins=25, color='r', edgecolor='k', alpha=0.5, label=str.upper(v2), range=range)
-            plt.legend()
-            plt.show()
-        print('')
-    return show_results
-
-def quantile_decil(comp_col='arch', **kwargs):
-    deciles = [.1 * i for i in range(11)]
-    quartiles = [0,.25,.5,.75,1.]
-    r = pd.DataFrame(index=deciles)  
-
+def compute_from_distribution_division(comp_col, division_values, **kwargs):
     for col_value in filter_exp()[comp_col].unique():
         df = filter_exp(**kwargs)
         df = df.loc[df[comp_col]==col_value]
-        a = df.mean_score.quantile(deciles).values
+        a = df.mean_score.quantile(division_values).values
         #print(a)x
         r[col_value] = a
     return r.T
+
+
+def get_quartiles(comp_col='arch', **kwargs):
+    """Get the decil of the results of a set of experiments.
+
+    Return a DataFrame with as many rows as the number of unique values of comp_col
+
+    Example: if comp_col is arch, a DataFrame with 4 rows is returned where each row
+    has the deciles of the experiment that correspond to that value of the comp_col
+
+    Args:
+        comp_col (str, optional). Defaults to 'arch'.
+
+    Returns:
+        _type_: _description_
+    """
+    quartiles = [0,.25,.5,.75,1.]
+    r = pd.DataFrame(index=quartiles)  
+    return compute_from_distribution_division(comp_col, quartiles, **kwargs)
+
+
+def get_delices(comp_col='arch', **kwargs):
+    """Get the decil of the results of a set of experiments.
+
+    Return a DataFrame with as many rows as the number of unique values of comp_col
+
+    Example: if comp_col is arch, a DataFrame with 4 rows is returned where each row
+    has the deciles of the experiment that correspond to that value of the comp_col
+
+    Args:
+        comp_col (str, optional). Defaults to 'arch'.
+
+    Returns:
+        _type_: _description_
+    """
+    deciles = [.1 * i for i in range(11)]
+    return compute_from_distribution_division(comp_col, deciles, **kwargs)
+
+
+def plot_distribution(data1, text1, data2, text2, rank_by, comp_col, poi, user="all"):
+    fig, axs = plt.subplots(2, 2, figsize=(10, 7))
+    mu, sigma = stats.norm.fit(data1)
+    # Theoretical values for normal distribution in the observed range
+    x_hat = np.linspace(min(data1), max(data1), num=100)
+    y_hat = stats.norm.pdf(x_hat, mu, sigma)
+    # Distribution plot
+    axs[0, 0].plot(x_hat, y_hat, linewidth=2, label='normal')
+    axs[0, 0].hist(x=data1, density=True, bins=20, color="#3182bd", alpha=0.5)
+    axs[0, 0].plot(data1, np.full_like(data1, -0.01), '|k', markeredgewidth=1)
+    axs[0, 0].set_title('Distribution for ' + str(text1))
+    axs[0, 0].set_xlabel(rank_by)
+    axs[0, 0].set_ylabel('Probability density')
+    axs[0, 0].legend()
+    # qq-plot
+    pg.qqplot(data1, dist='norm', ax=axs[0, 1])
+
+    mu, sigma = stats.norm.fit(data2)
+    x_hat = np.linspace(min(data2), max(data2), num=100)
+    y_hat = stats.norm.pdf(x_hat, mu, sigma)
+    axs[1, 0].plot(x_hat, y_hat, linewidth=2, label='normal')
+    axs[1, 0].hist(x=data2, density=True, bins=20, color="#3182bd", alpha=0.5)
+    axs[1, 0].plot(data2, np.full_like(data2, -0.01), '|k', markeredgewidth=1)
+    axs[1, 0].set_title('Distribution for ' + str(text2))
+    axs[1, 0].set_xlabel(rank_by)
+    axs[1, 0].set_ylabel('Probability density')
+    axs[1, 0].legend()
+
+    pg.qqplot(data2, dist='norm', ax=axs[1, 1])
+
+    plt.tight_layout()
+    plt.savefig(
+        '../figures/' + poi + '/distribution-' + comp_col + '-' + str(text1) + '-' + str(text2) + '-rankedby-' + str(
+            rank_by) + '-user-' + str(user) + '.png')
+    plt.close(fig)
+
+
+def plotBoxplot(data1, text1, data2, text2, rank_by, comp_col, poi, user="all"):
+    # Plot boxplot
+    # ==============================================================================
+    data = pd.Series(data1, name=text1).to_frame().join(pd.Series(data2, name=text2))
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 3.5))
+    sns.boxplot(
+        data=data,
+        palette='tab10',
+        ax=ax
+    )
+    ax.set_title(f'Distribution for {rank_by} by {comp_col}')
+    ax.set_xlabel(comp_col)
+    ax.set_ylabel(rank_by)
+    plt.savefig('../figures/' + poi + '/boxplot-' + comp_col + '-' + str(text1) + '-' + str(text2) + '-rankedby-' + str(
+        rank_by) + '-user-' + str(user) + '.png')
+    plt.close(fig)
+
+
+def get_p_value(comp_col='arch', v1='tcn', v2='mlp', rank_by='score', decil=None, generateFigures=False, **kwargs):
+    """Runs statistic tests
+
+    Args:
+        comp_col (str, optional): comparison columns. Defaults to 'arch'.
+        v1 (str, optional): value 1 of comp_col to compare. Defaults to 'tcn'.
+        v2 (str, optional): value 2 of comp_col to compare. Defaults to 'mlp'.
+        rank_by (str, optional): the value to be compared and used in the tests. Defaults to 'score'.
+        decil (int, optional): the decil to be used to run the test. Defaults to None.
+        generateFigures (bool, optional). Defaults to False.
+
+    Returns:
+        bool: whether statistical significance was found or not
+    """
+
+
+    if 'user' in kwargs:
+        user = kwargs['user']
+    else:
+        user = "all"
+
+    alpha = 0.05
+
+    print('*' * 48)
+    print(f'Comparing values {v1} and {v2} from {comp_col} category, ranked by {rank_by} con **kwargs={kwargs}\n')
+
+    exps = filter_exp(**kwargs)
+
+    if rank_by in ['score', 'time']:
+        rank_by = f'mean_{rank_by}'
+
+    v1_exps_df = exps.loc[exps[comp_col] == v1].loc[:, rank_by]
+    v1_exps = v1_exps_df.dropna().values
+    v2_exps_df = exps.loc[exps[comp_col] == v2].loc[:, rank_by]
+    v2_exps = v2_exps_df.dropna().values
+
+    if decil != None:
+        decil_per_arch = get_deciles(comp_col)
+        decil_value = decil_per_arch.filter(items=[v1], axis=0).iloc[0, decil]
+        v1_exps = v1_exps[v1_exps < decil_value]
+        decil_value = decil_per_arch.filter(items=[v2], axis=0).iloc[0, decil]
+        v2_exps = v2_exps[v2_exps < decil_value]
+
+    print('Sample size of ' + str(v1) + ': ' + str(len(v1_exps)))
+    print('Sample size of ' + str(v2) + ': ' + str(len(v2_exps)))
+
+    if len(v1_exps) <= 3 or len(v2_exps) <= 3:
+        print("NOT ENOUGH DATA AVAILABLE")
+        return False;
+
+    if generateFigures:
+        plot_distribution(v1_exps, v1, v2_exps, v2, rank_by, comp_col, kwargs['poi'], user)
+
+    v1_mean = np.mean(v1_exps)
+    v2_mean = np.mean(v2_exps)
+
+    v1_median = np.median(v1_exps)
+    v2_median = np.median(v2_exps)
+
+    v1_std = np.std(v1_exps)
+    v2_std = np.std(v2_exps)
+
+    print(f'mean {v1}: {v1_mean}')
+    print(f'mean {v2}: {v2_mean}\n')
+    print(f'median {v1}: {v1_median}')
+    print(f'median {v2}: {v2_median}\n')
+    print(f'std {v1}: {v1_std}')
+    print(f'std {v2}: {v2_std}\n')
+
+    print('*' * 31)
+    print("Shapiro-Wilk test for normality")
+    print('*' * 31)
+    shapiro1 = shapiro(v1_exps)[1]
+    shapiro2 = shapiro(v2_exps)[1]
+
+    v1_is_normal = shapiro1 > alpha
+    v2_is_normal = shapiro2 > alpha
+
+    normality_v1 = 'normal' if v1_is_normal else 'not normal'
+    normality_v2 = 'normal' if v2_is_normal else 'not normal'
+
+    print(f'Shapiro-Wilk test result for {v1}: {shapiro1} ({normality_v1})')
+    print(f'Shapiro-Wilk test result for {v2}: {shapiro2} ({normality_v2})')
+    print('')
+
+    print('*' * 31)
+    print("Levene test for equal variances")
+    print('*' * 31)
+    levene_test = stats.levene(v1_exps, v2_exps, center='median')
+    equal_variances = levene_test[1] > alpha
+    homoscedasticity = 'Homoscedasticity' if equal_variances else 'Heteroscedasticity'
+    print(f'{levene_test} ({homoscedasticity})')
+    if generateFigures:
+        plotBoxplot(v1_exps, v1, v2_exps, v2, rank_by, comp_col, kwargs['poi'], user)
+    print('')
+
+    if len(v1_exps) > 30 or len(v2_exps) > 30:
+        print('*' * 13)
+        print("T-Test result")
+        print('*' * 13)
+        test_result = ttest_ind(v1_exps, v2_exps, nan_policy="omit", equal_var=equal_variances)
+        print(test_result)
+    else:
+        print('*' * 13)
+        print("U-Test result")
+        print('*' * 13)
+        test_result = mannwhitneyu(v1_exps, v2_exps, method="exact", nan_policy="omit")
+        print(test_result)
+
+    sig_dif = test_result[1] < alpha
+    if sig_dif:
+        print('Statistical significance found')
+    else:
+        print('Statistical significance NOT found')
+
+    print('')
+    print(f'{v1} NaN values: {v1_exps_df.isna().sum()} de {v1_exps_df.count()}')
+    print(f'{v2} NaN values: {v2_exps_df.isna().sum()} de {v2_exps_df.count()}\n')
+    print('')
+    return sig_dif
+
+
+#######################################################
+# Functions that use get_p_value() to compare different
+# aspects of the experiments
+########################################################
+
+def compare_prototype_users(generateFigures=False):
+    df = get_experiments_data()
+
+    low_met_users = [u for u in df.loc[df.centroid == 'low_met'].user.unique() if u != 34]
+    high_met_users = [u for u in df.loc[df.centroid == 'high_met'].user.unique() if u != 32]
+    print('x' * 100)
+    print('Low MET')
+    i = 0
+    j = 0
+    for u in low_met_users:
+        if get_p_value('user', 34, u, poi='imp', generateFigures=generateFigures):
+            j += 1
+        i += 1
+    print(f'{j} of {i} with statistical difference')
+    i = 0
+    j = 0
+    print('x' * 100)
+    print('High MET')
+    for u in high_met_users:
+        if get_p_value('user', 32, u, poi='imp', generateFigures=generateFigures):
+            j += 1
+        i += 1
+    print(f'{j} of {i} with statistical difference')
+
+
+def compare_architectures(metric='score', poi='imp', generateFigures=False):
+    archs = ['cnn', 'mlp', 'rnn', 'tcn']
+    if poi == 'imp':
+        for i in archs:
+            for j in archs:
+                if i < j:
+                    get_p_value(comp_col='arch', v1=i, v2=j, poi='imp', decil=6, rank_by=metric, generateFigures=generateFigures)
+    else:
+        users = get_list_of_users()
+        for u in users:
+            for i in archs:
+                for j in archs:
+                    if i < j:
+                        # get_p_value(comp_col='arch', v1=i, v2=j, poi='imp', verbose=2, force_test="student", decil=6)
+                        get_p_value(comp_col='arch', v1=i, v2=j, poi='per', user=u, decil=6, rank_by=metric, generateFigures=generateFigures)
+
+
+def compare_lags(metric='score', poi='imp', generateFigures=False):
+    if poi == 'imp':
+        for nb1 in [1, 2, 4, 8]:
+            for nb2 in [1, 2, 4, 8]:
+                if nb1 < nb2:
+                    get_p_value(comp_col='nb_lags', v1=nb1, v2=nb2, poi='imp', rank_by=metric, generateFigures=generateFigures)
+    else:
+        users = get_list_of_users()
+        for u in users:
+            for nb1 in [1, 2, 4, 8]:
+                for nb2 in [1, 2, 4, 8]:
+                    if nb1 < nb2:
+                        get_p_value(comp_col='nb_lags', v1=nb1, v2=nb2, poi='per', user=u, rank_by=metric, generateFigures=generateFigures)
+
+
+def compare_granularity(metric='score', poi='imp', generateFigures=False):
+    if poi == 'imp':
+        get_p_value(comp_col='gran', v1=30, v2=60, rank_by=metric, poi='imp', generateFigures=generateFigures)
+    else:
+        users = get_list_of_users()
+        for u in get_list_of_users():
+            get_p_value(comp_col='gran', v1=30, v2=60, rank_by=metric, poi='per', user=u, generateFigures=generateFigures)

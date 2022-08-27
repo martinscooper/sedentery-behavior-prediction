@@ -115,6 +115,8 @@ def create_tcn_model_fn(num_filters, kernel_size, dropout, use_skip_connections,
 
 
 def get_model(arch, *args,):
+    """Creates a model based on arch and passing the args to the create model function
+    """
     model_fn_dict = {'mlp': create_mlp_model_fn,
                      'cnn': create_cnn_model_fn,
                      'rnn': create_rnn_model_fn,
@@ -126,6 +128,16 @@ def get_model(arch, *args,):
 
 
 def get_model_info(arch, centroid, model_type):
+    """Returns the model hyperparameters
+
+    Args:
+        arch (str): the neural network type
+        centroid (int): the corresponding centroid of the user
+        model_type (str): the model type, personal or impersonal
+
+    Returns:
+        _type_: _description_
+    """
     checkpoint_file = f'../pkl/tunning/checkpoint_{arch}_{centroid}_{model_type}.pkl'
     res = load(checkpoint_file)
     return sorted(zip(res.func_vals, res.x_iters))[0][1]
@@ -150,7 +162,23 @@ def get_closests():
     return y
 
 
-def run_experiment(poi, arch, user, gran, nb_lags, period, closest = None, task_type= 'regresshionn', times=[], **kargs):
+def run_experiment(poi, arch, user, gran, nb_lags, period, closest = None, task_type= 'regresion', times=[], **kargs):
+    """Runs a single experiment
+
+    Experiments are not run if its pickle file is already present in the filesystem
+
+    Args:
+        poi (string): personal or impersonal
+        arch (string): the neural network type
+        user (int): the user id
+        gran (int): the granularity: ammout of minutes that the dataset is devided in
+        nb_lags (int): how many lags each example has
+        period (int): how separated lags are
+        closest (dict, optional):  closest centroid for each user. Defaults to None.
+        task_type (str, optional): task type. Defaults to 'regresion'.
+        times (list, optional): the time it takes for the experiments. Useful for identifying is slowing down due to memory consumption. Defaults to [].
+    """
+
     name = f'_{task_type}_gran{get_granularity_from_minutes(gran)}_period{period}_lags{nb_lags}_model-{arch}_user{user}_{poi}'
     file_name = f'../pkl/experiments/{name}.pkl'
     print(datetime.now())
@@ -188,6 +216,11 @@ def run_experiment(poi, arch, user, gran, nb_lags, period, closest = None, task_
 
 
 def run_all_experiments(reverse_order:bool=False, **kargs):
+    """Runs all the experiments
+
+    Args:
+        reverse_order (bool, optional): Run the experiments in reverse order. Used if experiments are being run in two separate machines. Defaults to False.
+    """
     task_type = 'regression'
     closest = get_closests()
     c = 0

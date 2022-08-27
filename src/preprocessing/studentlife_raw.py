@@ -54,6 +54,12 @@ def get_sensor_data(sensor) -> pd.DataFrame:
 
 def get_studentlife_dataset(nb_min):
 
+    """Process the StudentLife dataset
+
+    create_sensing_tables() has to be run before to generage the csv files that this function consumes
+
+    """
+
     def to_time(df, col='time'):
         df[col] = pd.to_datetime(df[col], unit='s')
         return df
@@ -90,7 +96,6 @@ def get_studentlife_dataset(nb_min):
         Set dataset index from the cartesian product between
         the users id and
         the minimun and maximun date found
-
         '''
         uindex = sdata['userId'].drop_duplicates()
 
@@ -155,7 +160,6 @@ def get_studentlife_dataset(nb_min):
 
         # audiomajor
         s['audio_major'] = audio_groups['audioId'].apply(most_common)
-        # los siguientes usuarios poseen horas completas en las cuales no tienen ningun registro de audio
         #s.loc[s['audiomajor'].isnull(), 'audiomajor'].groupby('userId').size()
         s.loc[:, 'audio_major'].fillna(method='ffill', axis=0, inplace=True) #suponiendo que se deja de grabar cuando no hay ruido
         s.loc[:,'audio_major'] = s.audio_major.astype('object')    
@@ -256,7 +260,7 @@ def get_studentlife_dataset(nb_min):
                     else:
                         r = [t['start']]
                     tuples +=  [ (t.userId, d) for d in r]
-                #drop duplicates cause there are intervals that matches the hour if finish and the hour of start are equal
+                # drop duplicates cause there are intervals that matches the hour if finish and the hour of start are equal
                 ind = pd.MultiIndex.from_tuples(tuples, names = ['userId','time'])
                 aux_series = pd.Series(index=ind)
                 convs_per_hour = aux_series.groupby(aux_series.index).size().astype('int')
